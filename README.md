@@ -1,212 +1,293 @@
-# Mid-Scale Puppet Enterprise Scaled/HA Stack #
-###A guide and a module###
-##Synopsis##
-The following is a rough guide for deploying a medium-scale Puppet Enterprise installation.  This will be comprised of one "*primary master*", and additional "*secondary masters*".  In this particular scenario, the *primary master* is comprised of all components of the PE stack in an "active" configuration.  Any *secondary masters* will have the full PE stack, but will utilize the *primary master* for active CA and PostgreSQL responsibilities.
+# pe_server
 
-Some pre-installation steps are assumed.  Generic DNS names should be set up to direct traffic to the appropriate component.  Some ideas for this are:
+## Overview
 
-`puppet.example.com` Points to a load balancer that directs traffic to the Puppet masters (`8140`).
-`master.example.com` Points to the *current live* primary master with active CA and PostgreSQL responsibilities.
+pe_server is designed to aide in the setup and management of a split-stack
+Puppet Enterprise infrastructure.  This includes full-stack masters, such as in
+a standby/DR type of configuration, or split installs of various configurations.
 
-##Terminology##
+This does not modify or replace the Puppet Enterprise installer or do anything
+that isn't supported.
 
-###primary_cname###
-Refers to the DNS name that points to the primary Puppet master (full stack).
+Basically, this module ensures the various services and components of a
+Puppet Enterprise stack point to the right places, have the right certificates,
+the right access, and the appropriate configurations accordingly.  For proper
+use, this relies on PE's answer files to provide the correct information at
+installation time, as well as a bootstrapping procedure for standing the servers
+up.
 
-*e.g. `master.example.com`*
+## Classes
 
-###Primary Puppetmaster###
-The Puppet Master that currently serves all the non-sharable roles, including the CA server and the PostgreSQL server.  All active services on each additional master that need CA or database access will do so by accessing the primary through the primary_cname.  There can only be one primary master per cluster.
+###pe_server
 
-###Secondary Puppetmaster###
-Any Puppet Master that is not currently hosting the non-sharable services in an *active* manner.  You can have as many secondary masters as you desire.
+The base class. Configures the settings for an agent's CA server, filebucket,
+and has the ability to export resources for addition to a PuppetDB and Console
+whitelist.
 
-###general_cname###
-A generic DNS record that points to all the active Puppet Masters in an HA group.  This can be used to send requests to any master in an HA group.
+####Parameters:
 
-*e.g. `puppet.example.com`*
+#####`is_master`
 
-##Classes##
+Whether the node is a Puppet master or not.  This simply changes the filebucket
+server in the global `site.pp` to point to the specified filebucket server.
+Valid values are `true` or `false`.  Defaults to `false`
 
-###pe_secondary###
-* Disables CA functionality on the node
-* Corrects the CRL (revocation file) path for pe-httpd
-* Optional: Sets the filebucket to the primary master (default)
-* Optional: Exports the puppetdb whitelist (default)
+#####`ca_server`
 
-**Parameters**
+If specified, this will configure the `ca_server` option in `puppet.conf` to point
+to the value of this parameter. Value should be a resolvable address to the
+CA server.  Defaults to `undef`
 
-`primary_cname`
+#####`filebucket_server`
 
-Required. Should be set to the `primary_cname` as defined above.
+Should be set to a resolvable address to a filebucket server. Defaults to
+`$::settings::server`
 
-`change_filebucket`
+#####`change_filebucket`
 
-Default: true. Set the filebucket to the `primary_cname` or not.
+Specifies whether to configure the `archive_file_server` setting in `puppet.conf`
+Additionally, if `is_master` is set to `true`, this will set the filebucket
+server in the global `site.pp` (`$confdir/manifests/site.pp`) Defaults to
+`true`
 
-`export_puppetdb_whitelist`
+#####`export_puppetdb_whitelist`
 
-Default: true. Export the `$clientcert` to be added to the PuppetDB whitelist.
+Specifies whether to export the `$::clientcert` as an entry for the PuppetDB
+whitelist, which can optionally be collected by a PuppetDB server (via the
+pe_server::puppetdb class)
+Valid values
+are `true` or `false`.  Defaults to `true`
 
+#####`export_console_whitelist`
 
-###pe_secondary::console###
-* Configures the console as a non-CA server
-* Handles console-related certificates
-* Updates the event inspector config's certificate names
+Specifies whether to export the `$::clientcert` as an entry for the Console
+whitelist, which can optionally be collected by a Console server (via the
+pe_server::console class)
+Valid values
+are `true` or `false`.  Defaults to `true`
 
-**Parameters**
+###pe_server::console
 
-`ca_server`
+Used for configuring the Puppet Enterprise Console and managing its certificates.
 
-Required.  The address for the CA server.  Should likely be set to the `primary_cname`, as defined above.
+####Parameters
 
+#####`ca_server`
 
+Required. Specifies a resolvable address for the CA server for configuring  the
+console's settings.
 
-###pe_secondary::console::database###
-* Updates the console's database config to point to the primary master
+#####`console_cert_name`
 
-**Parameters**
+The certificate name for use with the PE console.  This is useful for having
+multiple consoles with different certificate names.  This will configure a
+console's httpd configuration to use this certificate name, the event inspector,
+and the console's settings. If `console_certs_from_ca` is set to `true`,
+certificates with this name will attempted to be copied from the CA.  If
+`create_console_certs` is set to `true`, certificates will be created on the
+console server with this name.
+Defaults to `pe-internal-dashboard`.
 
-`host`
+#####`cert_owner`
 
-The address for the PostgreSQL host. Should likely be set to the `primary_cname`, as defined above.
+The owner of the certificate files on the console.  Defaults to
+`puppet-dashboard`
 
-`password`
+#####`cert_group`
 
-The database password, as retrieved from the Primary Puppetmaster.
+The group of the certificate files on the console.  Defaults to
+`puppet-dashboard`
 
+#####`inventory_server`
 
-###pe_secondary::mcollective###
-* Provides the secondary master(s) with the Mcollective certificates from the primary
-* Provides the secondary master(s) with the Mcollective credentials from the primary
+Specifies a value for `inventory_server` in the console's settings.
+Defaults to `$::settings::server`
 
-###pe_secondary::puppetdb###
-* Adds the certificates to the puppetdb whitelist
+#####`puppetdb_host`
 
-##Typical Configuration##
+Specifies a resolvable address to a PuppetDB instance. Defaults to
+`$::fqdn`
 
-###1. Install PE###
-On two different nodes, install the full PE Master stack.  This includes every role available in the installer, with the exception of the "Cloud Provisioner".
+#####`puppetdb_port`
 
-**Certificate Names**: It's important to choose a certificate name appropriate for each master.  You must also provide a common, shared name for `dns_alt_names`, such as "`puppet.example.com`" that any master can be reached at.  Additionally, you should add the `primary_cname` here so that any secondary master could assume the role of the primary in the event of failure.
+Specifies the port that a PuppetDB instance is listening on. Defaults to
+`8081`
 
-###2. On the Primary###
-1. Install this module.
-2. Modify the `postgres_listen_addresses` parameter for the `pe_puppetdb` class on the primary master.  Set the value to `*` to have the PostgreSQL server listen on every interface.
+#####`create_console_certs`
 
-Modify `/etc/puppetlabs/puppet/autosign.conf` and add the certificate name for the secondary's console.  It will look like: `pe-internal-dashboard-<secondary fqdn>`
+Specifies whether console certs should be created locally using the dashboard's
+rake tasks.  This will create the certificates, send a CSR to the CA, and
+retrieve the signed certificates.  Defaults to `true` (this is normal
+behavior).
 
-Run a `puppet agent -t` on the primary master to ensure the PostgreSQL listen address gets updated and the service restarted.
+#####`console_certs_from_ca`
 
+Specifies whether the console certs should be copied from the CA.  This will
+look for certificate names matching the `console_cert_name` in on the CA in
+`/opt/puppet/share/puppet-dashboard/certs/`.  This setting and
+`create_console_certs` are mutually exclusive.  Valid values are `true` and
+`false`.  The default is `false`
 
-###3. On the Secondary###
-Let's temporarily disable the Puppet agent while we prepare the secondary: `service pe-puppet stop`
+#####`collect_exported_whitelist`
 
-Re-create certificates and run against the primary master.
+Specifies whether exported resources for the console whitelist should be
+collected and realized.  Valid values are `true` and `false`.  The default
+is `true`.
 
-1. `rm -rf /etc/puppetlabs/puppet/ssl`
-2. `puppet agent -t --server <primary server>`
-3. On the primary: sign the certificate request on the primary with the `allow-dns-alt-names` option
-4. On the secondary: run against the primary again: `puppet agent -t --server <primary server>`
+###pe_server::puppetdb
 
-###4. On the Primary's Console###
-Classify the secondary with the following classes:
+For managing PuppetDB instances and PE's PostgreSQL instance.
 
-1. `pe_puppetdb`: Modify the `postgres_listen_addresses` parameter and set it to `*` (NOTE: On Puppet Enterprise 3.2.x, this class is now called `pe_puppetdb::pe`)
-2. `pe_secondary`: Modify the `primary_cname` parameter and set it to the current live CA server
-3. `pe_secondary::console`: Modify the `ca_server` parameter to point to the current live CA server
-4. `pe_secondary::mcollective`: Modify the `primary_node_name` parameter and set it to the primary master by name.
-5. `pe_puppetdb::master` (NOTE: On Puppet Enterprise 3.2.x, this class is now called `pe_puppetdb::pe::master`)
+####Parameters
 
-###5. Database configuration###
-You'll need to gather database information from the primary for the secondary to use.
+#####`manage_postgres`
 
-**For the console**
+Specifies whether PostgreSQL should be managed by this class via the
+`pe_puppetdb::pe` class.  If true, the `postgres_listen_addresses` and
+`database_host` parameters will be set on the `pe_puppetdb::pe` class.
+Valid values are `true` and `false`.  The default is `true`
 
-1. On the primary master: `grep password /etc/puppetlabs/puppet-dashboard/database.yml`
-2. On the primary console: Add the `pe_secondary::console::database` class to the secondary and modify the `host` parameter to point to the `primary_cname` and the `password` parameter to the password recorded in the previous step.
+#####`postgres_listen_address`
 
-**For PuppetDB**
+The listen address for the PostgreSQL instance.  This is passed as the
+`postgres_listen_addresses` parameter to the `pe_puppetdb::pe` class.
+If the PostgreSQL database will need to be reached from another host, you'll
+need to use this parameter to ensure it's listening on the desired interfaces.
+The default value is `*` for all interfaces.
 
-1. On the primary master: `grep password /etc/puppetlabs/puppetdb/conf.d/database.ini`
-2. On the primary console: Modify the `pe_puppetdb` parameters and set the `database_host` to the `primary_cname` and the `database_password` to the password recorded in the previous step.
+#####`postgres_database_host`
 
-###6. Do a Puppet run on the secondary###
-On the secondary, run Puppet against the primary:
+Specifies the host that the PuppetDB PostgreSQL database can be reached at.
+This defaults to `$::fqdn`
 
-`puppet agent -t --server <primary server>`
+#####`puppetdb_ssl_setup`
 
-If you see errors, try re-running against the primary.  If errors persist, re-evaluate the previous steps.  Also, make sure there's no pending certificate signing requests on the primary master by doing a `puppet cert list` and signing as needed.
+Specifies whether the `puppetdb ssl-setup` should be ran to create PuppetDB
+SSL certificates (This is `/opt/puppet/sbin/puppetdb ssl-setup`). This will
+compare the certificates in `$ssldir` against the PuppetDB certificates and
+run the ssl-setup if they don't match.  The PuppetDB ssl-setup needs to be ran
+when the node's certificates change.  During installation of PE, this is done
+for you.  However, if you recreate certificates after installation or copy the
+  certificates from another host, you'll need to run the PuppetDB ssl-setup.
+Valid values are `true` and `false`.
+The default is `true`
 
-###7. Re-initialize the PuppetDB Certificates###
-When you installed the PE stack on the secondary, certificates were generated that need to be re-created.
+#####`collect_exported_whitelist`
 
-The following steps need to be done on the secondary.
+Specifies whether exported resources for the PuppetDB whitelist should be
+collected and realized.  Valid values are `true` and `false`.  The default
+is `true`.
 
-1. Remove the PuppetDB certificates: `rm -rf /etc/puppetlabs/puppetdb/ssl`
-2. Generate new certificates: `/opt/puppet/sbin/puppetdb-ssl-setup`
-3. Restart the PuppetDB service: `service pe-puppetdb restart`
+###pe_server::mcollective
 
-###8. Console Authentication###
-The console on the secondary needs to be configured to use the PostgreSQL database on the primary master.
+#### Parameters
 
-**On the primary master**
+#####`primary_node_name`
 
-1. Modify `/etc/puppetlabs/console-auth/database.yml` and ensure the `host:` value is set to the `primary_cname`
-2. Record the database password
+#####`sync_mco_credentials`
 
-**On the secondary master**
+### pe_server::console::database
 
-1. Modify `/etc/puppetlabs/console-auth/database.yml` and set the `password` value to the value recorded from the primary master.
-2. Set the value for `host` to the `primary_cname`
+This configures the `/etc/puppetlabs/puppet-dashboard/database.yml` file,
+providing connection details for the console's PostgreSQL database.
 
-###9. Add the secondary to console groups###
+#### Parameters
 
-On the primary's console, add the secondary to the following groups:
+#####`password`
 
-1. puppet_master
-2. puppet_console
+The PostgreSQL database password for the console.  This parameter is required.
 
-Edit the `puppet_master` group and add a variable called `activemq_brokers`.  Set the value to a comma-separated list of the FQDNs for the Puppet masters.
+#####`database`
 
-Edit the `mcollective` console group and add a variable called `fact_stomp_server`.  Set the value to a comma-separated list of the FQDNs for the Puppet masters, as you did in the previous step.
+The name of the console database. Defaults to `console`
 
-###10. Reactivate the secondary###
-Perform a Puppet run against the primary:
-`puppet agent -t --server <primary server>`
+#####`username`
 
-Restart PE services:
+The PostgreSQL database username for the console.  Defaults to `console`
 
-```
-service pe-httpd restart
-service pe-puppetdb restart
-service pe-puppet restart
-service pe-memcached restart
-service pe-puppet-dashboard-workers restart
-```
+#####`host`
 
-###11. Validate the secondary's functionality###
-At this point, the secondary should be ready to start serving catalogs to agents.
+The resolvable address to the PostgreSQL instance with the console database.
+Defaults to `localhost`
 
-Ensure the secondary can run cleanly against itself:
+#####`port`
 
-`puppet agent -t`
+The port that the console's PostgreSQL instance can be reached at.  Defaults to
+`5432`
 
-##Failover and Recovery##
+#####`adapter`
 
-In the event of primary master failure, a secondary can assume the roles of the primary.  Unfortunately, this is no automatic at this time.
+The database adapter to use for connecting to the database.  Defaults to
+`postgresql`
 
-The roles the secondary will need to assume are the CA and PostgreSQL server.
+###pe_server::console::event_inspector
 
-###Certificate Authority###
-The `/etc/puppetlabs/puppet/ssl/ca` directory should be backed up reguarily.  To transfer CA responsibilities, this directory needs to be placed on a new master.
+This is a private class (it's called by the console class - not you.)
+This class configures the console's event inspector config file at
+`/opt/puppet/share/event-inspector/config/config.yml`
 
-Set `ca=true` in `/etc/puppetlabs/puppet/puppet.conf` and restart the `pe-httpd` service.
+####Parameters
 
-###Databases###
-Backing up the PostgreSQL databases can be done in a variety of ways, such as "log shipping" or "log streaming".
+#####`console_cert_name`
 
-The database credentials should also be backed up.
+The certificate name of the console.  Defaults to `$::fqdn`
 
-###DNS###
-Once the CA and PostgreSQL services have been assumed on a new (or existing) master, the `primary_cname` should be changed to point to the new server.
+#####`puppetdb_port`
+
+The port for reaching the specified PuppetDB instance.  Defaults to `8081`
+
+#####`puppetdb_host`
+
+The host for reaching the PuppetDB instance.  Defaults to `$::fqdn`
+
+## Defined Types
+
+###pe_server::puppetdb::whitelist
+
+This is used to add certificate names to the PuppetDB whitelist at
+`/etc/puppetlabs/puppetdb/certificate-whitelist`
+
+#### Parameters
+
+#####`certname`
+
+The certname to add to the PuppetDB whitelist. Defaults to `$name`
+
+#####`match`
+
+An optional string or regular expression used to match the entry in the
+PuppetDB whitelist file.  Defaults to `$name`
+
+###pe_server::console::whitelist
+
+This is used to add certificate names to the PE Console whitelist at
+`/etc/puppetlabs/console-auth/certificate_authorization.yml`
+
+#### Parameters
+
+#####`certname`
+
+The certname to add to the Console whitelist. Defaults to `$name`
+
+#####`match`
+
+An optional string or regular expression used to match the entry in the
+Console whitelist file.  Defaults to `$name`
+
+#####`role`
+
+The authorization role for the certificate. Valid values are `read-write`,
+`read-only`, or `admin`.  Defaults to `read-write`
+
+## Compatibility
+
+This module is specific to Puppet Enterprise.  Puppet Open Source environments
+are not supported.
+
+This has been tested and developed against Puppet Enterprise 3.0 - 3.3
+
+## Authors
+
+The [pe_secondary](https://github.com/trlinkin/pe_secondary) module was
+created by [Tom Linkin](https://github.com/trlinkin).  This module is derived
+from that by [Josh Beard](https://signalboxes.net)

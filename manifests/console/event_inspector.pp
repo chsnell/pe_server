@@ -1,8 +1,8 @@
-class pe_secondary::console::event_inspector(
-  $console_name  = $::pe_secondary::params::console_name,
-  $puppetdb_port = $::pe_secondary::params::puppetdb_port,
-  $puppetdb_host = $::fqdn,
-){
+class pe_server::console::event_inspector (
+  $console_cert_name  = $::fqdn,
+  $puppetdb_port      = '8081',
+  $puppetdb_host      = $::fqdn,
+) {
 
   file { 'pe_event_inspector_config':
     ensure  => file,
@@ -10,7 +10,7 @@ class pe_secondary::console::event_inspector(
     group   => 'root',
     mode    => '0644',
     path    => '/opt/puppet/share/event-inspector/config/config.yml',
-    content => template('pe_secondary/event_inspector_config.yml.erb'),
+    content => template('pe_server/event_inspector_config.yml.erb'),
   }
-}
 
+}

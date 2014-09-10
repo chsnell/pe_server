@@ -1,39 +1,55 @@
-class pe_secondary (
-  $primary_cname,
+## Common
+class pe_server (
+  $is_master                 = false,
+  $ca_server                 = undef,
+  $filebucket_server         = $::settings::server,
   $change_filebucket         = true,
   $export_puppetdb_whitelist = true,
-){
+  $export_console_whitelist  = true,
+) {
 
-  augeas { 'puppet.conf_ca':
-    context => '/files/etc/puppetlabs/puppet/puppet.conf',
-    changes => [
-      'set master/ca false',
-      "set main/ca_server ${primary_cname}",
-      ],
-  }
+  if ($ca_server) { validate_string($ca_server) }
+  validate_bool($is_master)
+  validate_string($filebucket_server)
+  validate_bool($change_filebucket)
 
-  file_line { 'pe-httpd_revocation':
-    ensure => present,
-    match  => 'SSLCARevocationFile',
-    line   => '    SSLCARevocationFile     /etc/puppetlabs/puppet/ssl/crl.pem',
-    path   => '/etc/puppetlabs/httpd/conf.d/puppetmaster.conf',
+  validate_bool($export_puppetdb_whitelist)
+  validate_bool($export_console_whitelist)
+
+  if $ca_server {
+    augeas { 'puppet.conf_ca_server':
+      context => '/files/etc/puppetlabs/puppet/puppet.conf',
+      changes => "set main/ca_server ${ca_server}",
+    }
   }
 
   if $change_filebucket {
-    file_line { 'seondary_filebucket':
-      ensure => present,
-      line   => "  server => '${primary_cname}',",
-      match  => '^\s*server\s*=>',
-      path   => '/etc/puppetlabs/puppet/manifests/site.pp',
+    augeas { 'puppet.conf_archive_file_server':
+      context => '/files/etc/puppetlabs/puppet/puppet.conf',
+      changes => "set main/archive_file_server ${filebucket_server}",
+    }
+
+    if $is_master {
+      ## With 3.3's directory environments, this doesn't help much.
+      ## The filebucket will need to be set in each environment's site.pp
+      file_line { 'seondary_filebucket':
+        ensure => present,
+        line   => "  server => '${filebucket_server}',",
+        match  => '^\s*server\s*=>',
+        path   => '/etc/puppetlabs/puppet/manifests/site.pp',
+      }
     }
   }
 
   if $export_puppetdb_whitelist {
-    @@file_line { 'puppetdb_whitelist_master':
-      ensure => present,
-      line   => $clientcert,
-      path   => '/etc/puppetlabs/puppetdb/certificate-whitelist',
-      tag    => ['puppetdb_whitelist'],
+    @@pe_server::puppetdb::whitelist { $::clientcert:
+      tag => ['puppetdb_whitelist'],
+    }
+  }
+
+  if $export_console_whitelist {
+    @@pe_server::console::whitelist { $::clientcert:
+      tag => ['puppetdb_whitelist'],
     }
   }
 }
