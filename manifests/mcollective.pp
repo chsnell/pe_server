@@ -1,13 +1,25 @@
 class pe_server::mcollective (
-  $primary_node_name,
-  $sync_mco_credentials = true,
+  $primary            = $::settings::server,
+  $shared_credentials = true,
 ) {
-  $credentials      = strip(file('/etc/puppetlabs/mcollective/credentials'))
-  $credentials_file = '/etc/puppetlabs/mcollective/credentials'
+
+  if $shared_credentials {
+    $credentials      = strip(file('/etc/puppetlabs/mcollective/credentials'))
+    $credentials_file = '/etc/puppetlabs/mcollective/credentials'
+
+    ## The credentials file is already being managed by PE as a file resource,
+    ## so we can't do that here.  We're using an exec instead.
+    exec { 'mco-credentials':
+      command   => "echo \"${credentials}\" > ${credentials_file}",
+      unless    => "grep -qw \"${credentials}\" ${credentials_file}",
+      path      => [ '/bin' ],
+      logoutput => true,
+    }
+  }
 
   # If the master we're contacting is the primary, then we want its mcollective certs
   # this allows us to bootstrap new masters off a primary
-  if $::servername == $primary_node_name {
+  if ($::servername == $primary) {
 
     # Certificates
     file { 'pe-internal-broker-cert':
@@ -83,16 +95,6 @@ class pe_server::mcollective (
       ensure  => file,
       path    => '/etc/puppetlabs/puppet/ssl/public_keys/pe-internal-puppet-console-mcollective-client.pem',
       content => file('/etc/puppetlabs/puppet/ssl/public_keys/pe-internal-puppet-console-mcollective-client.pem'),
-    }
-  }
-
-
-  if $sync_mco_credentials {
-    exec { 'mco-credentials':
-      command   => "echo \"${credentials}\" > ${credentials_file}",
-      unless    => "grep -qw \"${credentials}\" ${credentials_file}",
-      path      => [ '/bin' ],
-      logoutput => true,
     }
   }
 

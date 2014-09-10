@@ -182,9 +182,9 @@ is `true`.
 
 #### Parameters
 
-#####`primary_node_name`
+#####`primary`
 
-#####`sync_mco_credentials`
+#####`shared_credentials`
 
 ### pe_server::console::database
 
