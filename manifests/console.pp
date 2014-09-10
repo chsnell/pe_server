@@ -213,7 +213,7 @@ class pe_server::console (
   }
 
   if $collect_exported_authorization {
-    Pe_secondary::Puppetdb::Authorization <<| tag == 'console_authorization' |>>
+    Pe_server::Puppetdb::Authorization <<| tag == 'console_authorization' |>>
   }
 
 }

@@ -19,7 +19,7 @@ class pe_server::puppetdb (
   validate_bool($puppetdb_ssl_setup)
 
   if $collect_exported_whitelist {
-    Pe_secondary::Puppetdb::Whitelist <<| tag == 'puppetdb_whitelist' |>>
+    Pe_server::Puppetdb::Whitelist <<| tag == 'puppetdb_whitelist' |>>
   }
 
   if $manage_postgres {
