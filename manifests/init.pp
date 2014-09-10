@@ -1,11 +1,11 @@
 ## Common
 class pe_server (
-  $is_master                 = false,
-  $ca_server                 = undef,
-  $filebucket_server         = $::settings::server,
-  $change_filebucket         = true,
-  $export_puppetdb_whitelist = true,
-  $export_console_whitelist  = true,
+  $is_master                     = false,
+  $ca_server                     = undef,
+  $filebucket_server             = $::settings::server,
+  $change_filebucket             = true,
+  $export_puppetdb_whitelist     = true,
+  $export_console_authorization  = true,
 ) {
 
   if ($ca_server) { validate_string($ca_server) }
@@ -14,7 +14,7 @@ class pe_server (
   validate_bool($change_filebucket)
 
   validate_bool($export_puppetdb_whitelist)
-  validate_bool($export_console_whitelist)
+  validate_bool($export_console_authorization)
 
   if $ca_server {
     augeas { 'puppet.conf_ca_server':
@@ -47,9 +47,9 @@ class pe_server (
     }
   }
 
-  if $export_console_whitelist {
-    @@pe_server::console::whitelist { $::clientcert:
-      tag => ['puppetdb_whitelist'],
+  if $export_console_authorization {
+    @@pe_server::console::authorization { $::clientcert:
+      tag => ['puppetdb_authorization'],
     }
   }
 }

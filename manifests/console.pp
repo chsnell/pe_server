@@ -1,14 +1,14 @@
 class pe_server::console (
   $ca_server,
-  $console_cert_name          = 'pe-internal-dashboard',
-  $cert_owner                 = 'puppet-dashboard',
-  $cert_group                 = 'puppet-dashboard',
-  $inventory_server           = $::settings::server,
-  $puppetdb_host              = $::fqdn,
-  $puppetdb_port              = '8081',
-  $create_console_certs       = true,
-  $console_certs_from_ca      = false,
-  $collect_exported_whitelist = true,
+  $console_cert_name              = 'pe-internal-dashboard',
+  $cert_owner                     = 'puppet-dashboard',
+  $cert_group                     = 'puppet-dashboard',
+  $inventory_server               = $::settings::server,
+  $puppetdb_host                  = $::fqdn,
+  $puppetdb_port                  = '8081',
+  $create_console_certs           = true,
+  $console_certs_from_ca          = false,
+  $collect_exported_authorization = true,
 ) {
 
   validate_string($ca_server)
@@ -20,7 +20,7 @@ class pe_server::console (
   validate_string($puppetdb_port)
   validate_bool($create_console_certs)
   validate_bool($console_certs_from_ca)
-  validate_bool($collect_exported_whitelist)
+  validate_bool($collect_exported_authorization)
 
   File {
     owner => $cert_owner,
@@ -212,8 +212,8 @@ class pe_server::console (
     Class['pe_server::console'] ~> Service['pe-httpd']
   }
 
-  if $collect_exported_whitelist {
-    Pe_secondary::Puppetdb::Whitelist <<| tag == 'console_whitelist' |>>
+  if $collect_exported_authorization {
+    Pe_secondary::Puppetdb::Authorization <<| tag == 'console_authorization' |>>
   }
 
 }

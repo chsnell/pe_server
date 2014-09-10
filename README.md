@@ -58,10 +58,10 @@ pe_server::puppetdb class)
 Valid values
 are `true` or `false`.  Defaults to `true`
 
-#####`export_console_whitelist`
+#####`export_console_authorization`
 
 Specifies whether to export the `$::clientcert` as an entry for the Console
-whitelist, which can optionally be collected by a Console server (via the
+authorization, which can optionally be collected by a Console server (via the
 pe_server::console class)
 Valid values
 are `true` or `false`.  Defaults to `true`
@@ -258,9 +258,9 @@ The certname to add to the PuppetDB whitelist. Defaults to `$name`
 An optional string or regular expression used to match the entry in the
 PuppetDB whitelist file.  Defaults to `$name`
 
-###pe_server::console::whitelist
+###pe_server::console::authorization
 
-This is used to add certificate names to the PE Console whitelist at
+This is used to add certificate names to the PE Console authorization at
 `/etc/puppetlabs/console-auth/certificate_authorization.yml`
 
 #### Parameters
