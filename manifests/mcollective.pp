@@ -1,7 +1,14 @@
 class pe_server::mcollective (
   $primary            = $::settings::server,
   $shared_credentials = true,
+  $activemq_brokers   = undef,
+  $stomp_servers      = undef,
 ) {
+
+  class { 'pe_mcollective::role::master':
+    activemq_brokers => $activemq_brokers,
+    stomp_servers    => $stomp_servers,
+  }
 
   if $shared_credentials {
     $credentials      = strip(file('/etc/puppetlabs/mcollective/credentials'))
