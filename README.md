@@ -16,6 +16,23 @@ use, this relies on PE's answer files to provide the correct information at
 installation time, as well as a bootstrapping procedure for standing the servers
 up.
 
+This is still being tweaked and documented.  See the "Contributions" section
+below.
+
+## Example Usage
+
+I have a sample "control repository" available at
+[https://github.com/joshbeard/puppet-tri-stack](https://github.com/joshbeard/puppet-tri-stack)
+that uses this module to stand up a 3+x3+ PE stack.
+
+This includes one full
+"primary" stack that has a CA/Master, a PuppetDB/PostgreSQL on a separate host,
+and a Console/PostgreSQL on a separate host.  A secondary stack that includes
+a Standby CA/Master, a PuppetDB/standby PostgreSQL on a separate host, and a
+Console/standby PostgreSQL on a separate host, with additional compile masters
+as an option.
+
+
 ## Classes
 
 ###pe_server
@@ -65,6 +82,49 @@ authorization, which can optionally be collected by a Console server (via the
 pe_server::console class)
 Valid values
 are `true` or `false`.  Defaults to `true`
+
+###pe_server::ca
+
+Class used for configuring a Puppet Enterprise CA server.
+
+####Parameters
+
+#####`active_ca`
+
+Whether this is an active CA or not.  If it is set to `false`, the `ca`
+option in the `puppet.conf` file will be set to false, and the HTTP SSL revocation
+certificate will be modified.
+
+#####`autosign`
+
+An optional array of certificate names to add to the CA's `autosign.conf` file.
+
+#####`generate_certs`
+
+Takes a hash of certificates to generate, with optional `dns_alt_names`. This
+uses [Reid Vandewiele's](https://github.com/reidmv)
+[puppet_certificate](https://forge.puppetlabs.com/reidmv/puppet_certificate)
+module and simply passes the hash onto that.  See his module for information
+on what the hash can look like.
+
+This will generate the specified certificates on this CA server.  This can be
+useful for cases where the SSL data will be synchronized and replaced on a
+secondary CA server.
+
+As an example:
+
+```puppet
+generate_certs => {
+  'puppetca02.example.com' => {
+    dns_alt_names => [
+      'puppetca02',
+      'puppetca.example.com',
+      'puppetca',
+    ],
+  },
+}
+```
+
 
 ###pe_server::console
 
@@ -128,9 +188,9 @@ look for certificate names matching the `console_cert_name` in on the CA in
 `create_console_certs` are mutually exclusive.  Valid values are `true` and
 `false`.  The default is `false`
 
-#####`collect_exported_whitelist`
+#####`collect_exported_authorization`
 
-Specifies whether exported resources for the console whitelist should be
+Specifies whether exported resources for the console authorization should be
 collected and realized.  Valid values are `true` and `false`.  The default
 is `true`.
 
@@ -184,18 +244,42 @@ is `true`.
 
 #####`primary`
 
+Address for the "primary/source of truth" server that has the Mcollective
+certificates to sync.  Defaults to `::$settings::server`
+
 #####`shared_credentials`
+
+Whether to synchronize the "credentials" file from the master.  This is the
+`/etc/puppetlabs/mcollective/credentials` file.  Defaults to `true`
+
+#####`activemq_brokers`
+
+Comma-separated list of ActiveMQ brokers.  This is passed along to the built-in
+`pe_mcollective::role::master` class, which is declared by this class.
+
+#####`stomp_servers`
+
+Comma-separated list of Mcollective STOMP servers.  This is passed along to the
+built-in `pe_mcollective::role::master` class, which is declared by this class.
 
 ### pe_server::console::database
 
 This configures the `/etc/puppetlabs/puppet-dashboard/database.yml` file,
 providing connection details for the console's PostgreSQL database.
 
+It also configures the `/etc/puppetlabs/console-auth/database.yml` file,
+providing connection details for the console_auth PostgreSQL database.
+
 #### Parameters
 
 #####`password`
 
 The PostgreSQL database password for the console.  This parameter is required.
+
+#####`console_auth_password`
+
+The PostgreSQL database password for the console_auth database.  This parameter
+is required.
 
 #####`database`
 
@@ -219,6 +303,14 @@ The port that the console's PostgreSQL instance can be reached at.  Defaults to
 
 The database adapter to use for connecting to the database.  Defaults to
 `postgresql`
+
+#####`console_auth_database`
+
+The name of the console_auth PostgreSQL database.  Defaults to `console_auth`
+
+#####`console_auth_username`
+
+The username for the console_auth PostgreSQL database.  Defaults to `console_auth`
 
 ###pe_server::console::event_inspector
 
@@ -286,8 +378,26 @@ are not supported.
 
 This has been tested and developed against Puppet Enterprise 3.0 - 3.3
 
+## Contributions
+
+Contributions are *very* welcomed.  Here's a few things, off the top of my head,
+that I think needs a look:
+
+* Test in various combinations of install. E.g. two full stack masters.
+* Can we safely manage more things?  Mcollective and ActiveMQ isn't really well
+managed by this module.  Can it be improved without stomping on PE's toes?
+* Compatibility with future versions of PE (3.4).  Certain parts of this may
+be unneeded with upgrades, some things will need changing, some things will need
+to be added.
+* Cleaner?  There's some parts of this that contains dragons.  Where can it be
+improved?  And the top design goal here is to *not* conflict with the out-of-the
+box PE installer and its modules.  This should just add a *safe* layer on top
+of it.
+* Documentation (as usual)
+
 ## Authors
 
-The [pe_secondary](https://github.com/trlinkin/pe_secondary) module was
-created by [Tom Linkin](https://github.com/trlinkin).  This module is derived
-from that by [Josh Beard](https://signalboxes.net)
+[Josh Beard](http://signalboxes.net)
+
+This module is heavily derived from [Tom Linkin's](https://github.com/trlinkin)
+[pe_secondary](https://github.com/trlinkin/pe_secondary) module.
