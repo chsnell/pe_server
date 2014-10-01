@@ -38,6 +38,15 @@ class pe_server (
         match  => '^\s*server\s*=>',
         path   => '/etc/puppetlabs/puppet/manifests/site.pp',
       }
+
+      if versioncmp($::pe_version, '3.2.0') >= 0 {
+        file_line { 'console.conf_certname':
+          ensure => present,
+          line   => "certificate_name = ${console_cert_name}",
+          match  => 'certificate_name',
+          path   => '/etc/puppetlabs/puppet/console.conf',
+        }
+      }
     }
   }
 
