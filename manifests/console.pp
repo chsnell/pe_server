@@ -198,16 +198,6 @@ class pe_server::console (
     console_cert_name => $console_cert_name,
   }
 
-  if versioncmp($::pe_version, '3.2.0') >= 0 {
-    file_line { 'console.conf_certname':
-      ensure => present,
-      line   => "certificate_name = ${console_cert_name}",
-      match  => 'certificate_name',
-      path   => '/etc/puppetlabs/puppet/console.conf',
-    }
-  }
-
-
   if defined('request_manager') {
     Class['pe_server::console'] ~> Service['pe-httpd']
   }

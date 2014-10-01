@@ -6,6 +6,7 @@ class pe_server (
   $change_filebucket             = true,
   $export_puppetdb_whitelist     = true,
   $export_console_authorization  = true,
+  $console_cert_name             = 'pe-internal-dashboard',
 ) {
 
   if ($ca_server) { validate_string($ca_server) }
@@ -15,6 +16,7 @@ class pe_server (
 
   validate_bool($export_puppetdb_whitelist)
   validate_bool($export_console_authorization)
+  validate_string($console_cert_name)
 
   if $ca_server {
     augeas { 'puppet.conf_ca_server':
@@ -37,6 +39,15 @@ class pe_server (
         line   => "  server => '${filebucket_server}',",
         match  => '^\s*server\s*=>',
         path   => '/etc/puppetlabs/puppet/manifests/site.pp',
+      }
+
+      if versioncmp($::pe_version, '3.2.0') >= 0 {
+        file_line { 'console.conf_certname':
+          ensure => present,
+          line   => "certificate_name = ${console_cert_name}",
+          match  => 'certificate_name',
+          path   => '/etc/puppetlabs/puppet/console.conf',
+        }
       }
     }
   }
