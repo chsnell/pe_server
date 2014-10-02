@@ -9,7 +9,8 @@ class pe_server (
 ) {
 
   if ($ca_server) { validate_string($ca_server) }
-  validate_string($filebucket_server)
+  if ($puppet_server) { validate_string($puppet_server) }
+  if ($filebucket_server) { validate_string($filebucket_server) }
   validate_bool($export_puppetdb_whitelist)
   validate_bool($export_console_authorization)
 

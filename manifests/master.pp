@@ -1,6 +1,6 @@
 ## Configures Puppet Enterprise Masters
 class pe_server::master (
-  $filebucket_server             = $::pe_server::filebucket_server
+  $filebucket_server             = $::pe_server::filebucket_server,
   $console_cert_name             = 'pe-internal-dashboard',
 ) inherits pe_server {
 
