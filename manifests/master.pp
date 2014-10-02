@@ -1,12 +1,12 @@
 ## Configures Puppet Enterprise Masters
 class pe_server::master (
-  $filebucket_server             = $::settings::server,
-  $change_filebucket             = true,
+  $filebucket_server             = $::pe_server::filebucket_server
   $console_cert_name             = 'pe-internal-dashboard',
-) {
+) inherits pe_server {
 
-  validate_string($filebucket_server)
-  validate_bool($change_filebucket)
+  if $filebucket_server {
+    validate_string($filebucket_server)
+  }
   validate_string($console_cert_name)
 
   ## Update the console configuration on PE 3.2 or greater
@@ -20,7 +20,7 @@ class pe_server::master (
     }
   }
 
-  if $manage_filebucket {
+  if $filebucket_server {
     ## With 3.3's directory environments, this doesn't help much.
     ## The filebucket will need to be set in each environment's site.pp
     file_line { 'seondary_filebucket':
