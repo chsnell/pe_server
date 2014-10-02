@@ -83,6 +83,13 @@ pe_server::console class)
 Valid values
 are `true` or `false`.  Defaults to `true`
 
+#####`console_cert_name`
+
+The certificate name of the dashboard certificates.  This is used to ensure
+`/etc/puppetlabs/puppet/console.conf` refers to the correct certificate name.
+This only applies to masters.
+Defaults to `pe-internal-dashboard`
+
 ###pe_server::ca
 
 Class used for configuring a Puppet Enterprise CA server.
@@ -395,9 +402,24 @@ box PE installer and its modules.  This should just add a *safe* layer on top
 of it.
 * Documentation (as usual)
 
-## Authors
+## Relevant Jira Tickets
+
+These are internal tickets worth tracking, as they relate to the functionality
+of this module.
+
+[https://tickets.puppetlabs.com/browse/PE-5643](https://tickets.puppetlabs.com/browse/PE-5643)
+
+[https://tickets.puppetlabs.com/browse/PE-5642](https://tickets.puppetlabs.com/browse/PE-5642)
+
+[https://tickets.puppetlabs.com/browse/PE-3165](https://tickets.puppetlabs.com/browse/PE-3165)
+
+## Contributors
 
 [Josh Beard](http://signalboxes.net)
+
+[Tom Linkin](http://github.com/trlinkin)
+
+[Greg Sarjeant](https://github.com/gsarjeant)
 
 This module is heavily derived from [Tom Linkin's](https://github.com/trlinkin)
 [pe_secondary](https://github.com/trlinkin/pe_secondary) module.

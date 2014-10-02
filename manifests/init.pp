@@ -25,6 +25,19 @@ class pe_server (
     }
   }
 
+  if $is_master {
+    ## Update the console configuration on PE 3.2 or greater
+    ## This didn't exist prior to PE 3.2
+    if versioncmp($::pe_version, '3.2.0') >= 0 {
+      file_line { 'console.conf_certname':
+        ensure => present,
+        line   => "certificate_name = ${console_cert_name}",
+        match  => 'certificate_name',
+        path   => '/etc/puppetlabs/puppet/console.conf',
+      }
+    }
+  }
+
   if $change_filebucket {
     augeas { 'puppet.conf_archive_file_server':
       context => '/files/etc/puppetlabs/puppet/puppet.conf',
@@ -39,15 +52,6 @@ class pe_server (
         line   => "  server => '${filebucket_server}',",
         match  => '^\s*server\s*=>',
         path   => '/etc/puppetlabs/puppet/manifests/site.pp',
-      }
-
-      if versioncmp($::pe_version, '3.2.0') >= 0 {
-        file_line { 'console.conf_certname':
-          ensure => present,
-          line   => "certificate_name = ${console_cert_name}",
-          match  => 'certificate_name',
-          path   => '/etc/puppetlabs/puppet/console.conf',
-        }
       }
     }
   }
