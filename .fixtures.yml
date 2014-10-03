@@ -1,0 +1,6 @@
+fixtures:
+  repositories:
+    "stdlib": "git://github.com/puppetlabs/puppetlabs-stdlib.git"
+    "puppet_certificate": "https://github.com/reidmv/puppet-module-puppet_certificate.git"
+  symlinks:
+    "pe_server": "#{source_dir}"
