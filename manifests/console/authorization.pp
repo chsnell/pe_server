@@ -1,6 +1,6 @@
 class pe_server::console::authorization (
   $authorizations = {
-    'pe-internal' => {
+    'pe-internal-dashboard' => {
       'role'      => 'read-write'
     },
   },
