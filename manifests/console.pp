@@ -3,22 +3,44 @@ class pe_server::console (
   $console_cert_name              = 'pe-internal-dashboard',
   $cert_owner                     = 'puppet-dashboard',
   $cert_group                     = 'puppet-dashboard',
-  $inventory_server               = $::settings::server,
+  $inventory_server               = undef,
   $puppetdb_host                  = $::fqdn,
   $puppetdb_port                  = '8081',
   $create_console_certs           = true,
   $console_certs_from_ca          = false,
-) {
+) inherits pe_server {
 
   validate_string($ca_server)
   validate_string($console_cert_name)
   validate_string($cert_owner)
   validate_string($cert_group)
-  validate_string($inventory_server)
   validate_string($puppetdb_host)
   validate_string($puppetdb_port)
   validate_bool($create_console_certs)
   validate_bool($console_certs_from_ca)
+  if ($inventory_server) { validate_string($inventory_server) }
+
+  ## If a inventory_server wasn't specified, default it to the puppet_server
+  ## If puppet_server is not specified, default it to $::servername (what's
+  ## compiling the catalog).  In a 'puppet apply', this is undef, and won't
+  ## be managed.
+  ## if puppet_server is set.  Otherwise, use what was specified.
+  ## This is looks a little weird, because we're using the value from another
+  ## parameter here.
+  ## See https://tickets.puppetlabs.com/browse/PUP-1985
+  case $inventory_server {
+    undef: {
+      if $puppet_server {
+        $_inventory_server = $puppet_server
+      }
+      else {
+        $_inventory_server = $::servername
+      }
+    }
+    default: {
+      $_inventory_server = $inventory_server
+    }
+  }
 
   File {
     owner => $cert_owner,
@@ -122,7 +144,7 @@ class pe_server::console (
 
   file_line { 'inventory_server':
     ensure => present,
-    line   => "inventory_server: '${inventory_server}'",
+    line   => "inventory_server: '${_inventory_server}'",
     match  => 'inventory_server:',
     path   => '/etc/puppetlabs/puppet-dashboard/settings.yml',
   }
