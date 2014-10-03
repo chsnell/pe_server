@@ -19,6 +19,10 @@ up.
 This is still being tweaked and documented.  See the "Contributions" section
 below.
 
+
+**Next version of Puppet Enterprise:** The next minor or major release of PE
+will likely render this module useless and incompatible.  We'll see what happens.
+
 ## Example Usage
 
 I have a sample "control repository" available at
