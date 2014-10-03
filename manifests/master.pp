@@ -23,7 +23,7 @@ class pe_server::master (
   if $filebucket_server {
     ## With 3.3's directory environments, this doesn't help much.
     ## The filebucket will need to be set in each environment's site.pp
-    file_line { 'seondary_filebucket':
+    file_line { 'sitepp_filebucket':
       ensure => present,
       line   => "  server => '${filebucket_server}',",
       match  => '^\s*server\s*=>',
