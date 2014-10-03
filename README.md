@@ -1,5 +1,7 @@
 # pe_server
 
+[![Build Status](https://travis-ci.org/joshbeard/pe_server.svg?branch=descriptive_class_refactor)](https://travis-ci.org/joshbeard/pe_server)
+
 ## Overview
 
 pe_server is designed to aide in the setup and management of a split-stack
