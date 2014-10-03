@@ -13,8 +13,8 @@ PuppetLint.configuration.ignore_paths = ["spec/**/*.pp", "pkg/**/*.pp"]
 ## The following lines can be uncommented to prevent removing the fixtures
 ## after testing.
 ##
-Rake::Task[:spec].clear
-task :spec do
-  Rake::Task[:spec_prep].invoke
-  Rake::Task[:spec_standalone].invoke
-end
+#Rake::Task[:spec].clear
+#task :spec do
+#  Rake::Task[:spec_prep].invoke
+#  Rake::Task[:spec_standalone].invoke
+#end
