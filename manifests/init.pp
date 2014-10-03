@@ -5,14 +5,12 @@ class pe_server (
   $puppet_server                 = undef,
   $filebucket_server             = undef,
   $export_puppetdb_whitelist     = true,
-  $export_console_authorization  = true,
 ) {
 
   if ($ca_server) { validate_string($ca_server) }
   if ($puppet_server) { validate_string($puppet_server) }
   if ($filebucket_server) { validate_string($filebucket_server) }
   validate_bool($export_puppetdb_whitelist)
-  validate_bool($export_console_authorization)
 
   ## If a filebucket_server wasn't specified, default it to the puppet_server
   ## If puppet_server is not specified, default it to $::servername (what's
@@ -68,11 +66,4 @@ class pe_server (
     }
   }
 
-  ## Optionally export an entry for the console authorization.
-  ## This will be collected (optionally) with the pe_server::console class.
-  if $export_console_authorization {
-    @@pe_server::console::authorization { $::clientcert:
-      tag => ['puppetdb_authorization'],
-    }
-  }
 }

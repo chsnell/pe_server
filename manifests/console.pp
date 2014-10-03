@@ -8,7 +8,6 @@ class pe_server::console (
   $puppetdb_port                  = '8081',
   $create_console_certs           = true,
   $console_certs_from_ca          = false,
-  $collect_exported_authorization = true,
 ) {
 
   validate_string($ca_server)
@@ -20,7 +19,6 @@ class pe_server::console (
   validate_string($puppetdb_port)
   validate_bool($create_console_certs)
   validate_bool($console_certs_from_ca)
-  validate_bool($collect_exported_authorization)
 
   File {
     owner => $cert_owner,
@@ -200,10 +198,6 @@ class pe_server::console (
 
   if defined('request_manager') {
     Class['pe_server::console'] ~> Service['pe-httpd']
-  }
-
-  if $collect_exported_authorization {
-    Pe_server::Puppetdb::Authorization <<| tag == 'console_authorization' |>>
   }
 
 }
